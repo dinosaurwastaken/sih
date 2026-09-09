@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Transit Map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        #map { height: 100vh; width: 100%; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Leaflet Map JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map (Centered at default coordinates)
+        const map = L.map('map').setView([18.98, 73.11], 13); 
+
+        // Load free OpenStreetMap map tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Store active bus markers
+        const markers = {};
+
+        function fetchBusLocations() {
+            fetch('/api/buses')
+                .then(response => response.json())
+                .then(data => {
+                    for (const busId in data) {
+                        const bus = data[busId];
+                        
+                        if (markers[busId]) {
+                            // If the bus is already on the map, animate it to the new location
+                            markers[busId].setLatLng([bus.lat, bus.lng]);
+                        } else {
+                            // If it's a new bus, create a marker for it
+                            markers[busId] = L.marker([bus.lat, bus.lng])
+                                .bindPopup(`<b>${busId}</b>`)
+                                .addTo(map);
+                        }
+                    }
+                })
+                .catch(err => console.error("Error fetching bus data:", err));
+        }
+
+        // Poll the Python backend for updates every 3 seconds
+        setInterval(fetchBusLocations, 3000);
+        fetchBusLocations(); // Run immediately on load
+    </script>
+</body>
+</html>
